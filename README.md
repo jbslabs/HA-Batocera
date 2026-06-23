@@ -4,27 +4,72 @@ Bring Batocera into Home Assistant with real-time MQTT sensors, game tracking, c
 
 HA Batocera is a lightweight Batocera agent that publishes gaming and system data to Home Assistant through MQTT, allowing you to build dashboards, automations, notifications, and statistics around your retro gaming setup.
 
----
+# ⚠️ This project is currently in active development. Features and installation methods may change before v1.0.0.
+
+## Project Status
+
+Current Release: v0.9.0
+
+HA Batocera is currently in pre-release status while the native Home Assistant integration is under development.
+
+The Batocera MQTT Agent is fully functional and suitable for testing and daily use.
 
 ## Features
 
-* Real-time MQTT integration
-* Current emulator tracking
+### Gaming
+
 * Current game tracking
-* Previous game tracking
+* Last played game tracking
+* Current emulator tracking
 * Current play session tracking
 * Previous play session tracking
-* Total play time statistics
-* Controller connection monitoring
-* System uptime monitoring
+* Real-time game start and game end detection
+
+### Controllers
+
+* Controller count monitoring
+* Connected controller name tracking
+* Controller battery monitoring
+* Real-time controller connection updates
+
+### System Monitoring
+
+* Online/Offline status monitoring
+* CPU temperature monitoring
 * CPU usage monitoring
 * Memory usage monitoring
-* Storage usage monitoring
-* Home Assistant friendly MQTT topics
-* Lightweight Bash-based implementation
-* Designed specifically for Batocera
+* IP address reporting
+* System uptime monitoring
 
----
+### Storage Monitoring
+
+* Storage used
+* Storage available
+* Total storage capacity
+* Storage utilization percentage
+* ROM library count
+
+### Software Monitoring
+
+* Batocera version reporting
+* Update availability detection
+
+### Home Assistant Integration
+
+* MQTT Discovery support
+* Automatic entity creation
+* Automatic device registration
+* Home Assistant device grouping
+* Real-time state updates
+* Lightweight Bash-based implementation
+* Designed specifically for Batocera Linux
+
+### Remote Control
+
+* Reboot command support
+* Shutdown command support
+* MQTT-based device control
+* Easy integration with Wake-on-LAN, SwitchBot Bot, and Fingerbot power-on solutions through Home Assistant automations
 
 ## Requirements
 
@@ -40,8 +85,6 @@ HA Batocera is a lightweight Batocera agent that publishes gaming and system dat
 * MQTT Broker
 * MQTT Integration
 
----
-
 ## Installation
 
 1. Copy `ha_batocera_agent.sh` to your Batocera system.
@@ -53,8 +96,6 @@ chmod +x ha_batocera_agent.sh
 ```
 
 4. Start the agent manually or configure it to launch automatically at boot.
-
----
 
 ## Published Data
 
@@ -71,16 +112,23 @@ HA Batocera publishes a variety of MQTT topics including:
 ### Controllers
 
 * Controllers Connected
+* Controller Battery
 * Controller Count
 
 ### System
 
+* CPU Temperature
 * CPU Usage
-* Memory Usage
-* Storage Usage
+* RAM Usage
+* IP Address
 * System Uptime
-
----
+* Storage Used
+* Storage Available
+* Storage Total
+* Storage Utilization
+* ROM Count
+* Software Version
+* Update Availability
 
 ## Home Assistant
 
@@ -92,8 +140,6 @@ The published MQTT data can be used to create:
 * Notifications
 * Gaming activity tracking
 * Usage reports
-
----
 
 ## Screenshots
 
@@ -107,29 +153,36 @@ Example Home Assistant dashboard showing HA Batocera sensors and gaming statisti
 
 Coming Soon
 
----
-
 ## Roadmap
 
-### Version 1.0
+### Current Status (v0.9.x)
 
-* MQTT publishing
+* MQTT Discovery
+* Automatic Home Assistant entity creation
+* Automatic device registration
 * Game tracking
-* Emulator tracking
-* Controller monitoring
 * Session tracking
-* System statistics
+* Controller monitoring
+* Controller battery monitoring
+* System monitoring
+* Storage monitoring
+* Software version monitoring
+* Update detection
+* Power management commands
 
-### Future Releases
+### Planned for v1.0.0
 
-* HACS Integration
-* Automatic Installer
+* Native Home Assistant Integration
+* HACS Installation Support
+* Config Flow
+* One-click Installation
+* Diagnostics Support
 * Automatic Updates
-* MQTT Auto Discovery
-* Additional Batocera Sensors
-* Multi-System Support
 
----
+### Future Enhancements
+
+* Dashboard Templates
+* Additional Batocera Sensors
 
 ## Special Thanks
 
@@ -138,7 +191,6 @@ Special thanks to StePhan McKillen (myle) and the Home Assistant community for h
 https://community.home-assistant.io/t/batocera-to-home-assistant-via-mqtt/906675
 
 The original discussion demonstrated how MQTT could be used to bridge Batocera and Home Assistant and helped inspire the development of HA Batocera.
-
 
 ## Acknowledgements
 
