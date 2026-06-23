@@ -70,6 +70,7 @@ The Batocera MQTT Agent is fully functional and suitable for testing and daily u
 * Shutdown command support
 * MQTT-based device control
 * Easy integration with Wake-on-LAN, SwitchBot Bot, and Fingerbot power-on solutions through Home Assistant automations
+* Wake command trigger (see **Wake Command Trigger Use Cases** below)
 
 ## Requirements
 
@@ -146,12 +147,58 @@ The published MQTT data can be used to create:
 Example Batocera device page in Home Assistant.
 
 <p align="center">
-  <img src="./screenshots/hadevice.png" width="220" /> 
+  <img src="./screenshots/screenshot1.png" width="220" /> 
 </p>
 
 Example Home Assistant dashboard showing HA Batocera sensors and gaming statistics.
 
 Coming Soon
+
+## Wake Command Trigger Use Cases
+
+The Wake button is not intended to power on a completely powered-off Batocera system. For that, you'll need a separate solution such as Wake-on-LAN, a SwitchBot Bot, a Fingerbot, or a similar device.
+
+Instead, the Wake button acts as a reusable Home Assistant automation trigger that can be used to emulate the seamless wake-from-sleep experience found on modern gaming consoles.
+
+### Automation 1 - Define When Batocera is Active
+This automation determines when Batocera enters an active state and presses the HA Batocera Wake button. It creates a universal "Batocera In Use" event that can be reused across multiple automations.
+
+**Possible Triggers**
+
+* Controller Count changes from 0 → 1
+* A Wake-on-LAN packet is sent
+* A physical button, SwitchBot Bot, or Fingerbot is activated
+* A voice assistant command is issued
+* A scheduled event occurs
+* Any other Home Assistant trigger
+
+**Action**
+
+* Press the HA Batocera **Wake** button
+
+### Automation 2 - Define What Happens When Batocera is Active
+This automation determines what happens after the Wake button is pressed.
+
+**Trigger**
+
+* HA Batocera **Wake** button pressed
+
+**Possible Actions**
+
+* Turn on the TV (if off)
+* Switch to the Batocera HDMI input (if another source is active)
+* Turn on a soundbar or AVR (if off)
+* Activate gaming lights or RGB effects
+* Close blinds or adjust room lighting
+* Enable a dedicated gaming scene
+
+Using the two automations in this example:
+
+If the TV and soundbar are off, the automation can power everything on.
+If the TV is already on but displaying another source (such as Apple TV), the automation can simply switch to the Batocera input.
+If some devices are already on and others are off, the automation can react accordingly.
+
+This approach creates a console-like experience where the same trigger can intelligently adapt to the current state of your entertainment system without requiring changes to the trigger automation itself. By separating the trigger from the scene, users only need to maintain a single "Batocera In Use" automation while customizing the gaming experience however they like.
 
 ## Roadmap
 
