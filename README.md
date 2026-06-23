@@ -92,59 +92,169 @@ The Batocera MQTT Agent is fully functional and suitable for testing and daily u
 
 ## Installation
 
-1. Copy `ha_batocera_agent.sh` to your Batocera system.
-2. Configure MQTT settings inside the script.
-3. Make the script executable:
+### 1. Enable SSH in Batocera
+
+On your Batocera system:
+
+1. Open **Main Menu**
+2. Select **Network Settings**
+3. Enable **SSH**
+4. Take note of your Batocera IP address. Example: ```192.168.1.100```
+
+
+### 2. Connect to Batocera
+
+From another computer on your network:
+
+#### Windows
+
+Open **PowerShell** or **Windows Terminal**.
+
+#### macOS / Linux
+
+Open **Terminal**.
+
+Connect to Batocera device using SSH:
+
+  ```bash
+  ssh root@YOUR_BATOCERA_IP_OR_DEVICENAME
+  ```
+    
+  Example:
+      
+  ```bash
+  ssh root@192.168.1.100
+  ```
+Or
+
+  ```bash
+  ssh root@batocera
+  ```
+
+When prompted for a password, enter ```linux```. This is Batocera's default SSH password unless you have changed it.
+
+
+### 3. Create the HA Batocera Directory
+
+Run:
 
 ```bash
-chmod +x ha_batocera_agent.sh
+mkdir -p /userdata/system/homeassistant
 ```
 
-4. Start the agent manually or configure it to launch automatically at boot.
 
-## Published Data
+### 4. Create the Configuration File
 
-HA Batocera publishes a variety of MQTT topics including:
+Create:
+  
+  ```bash
+  nano /userdata/system/homeassistant/secrets.conf
+  ```
+  
+Copy and Paste the contents of ```batocera_agent/secrets.conf.example``` from this repository
+  
+Update the MQTT settings for your environment, then save:
+  
+  ```text
+  CTRL + X
+  Y
+  ENTER
+  ```
 
-### Gaming
 
-* Current Game
-* Current Emulator
-* Current Session Duration
-* Last Played Game
-* Previous Session Duration
+### 5. Create the Agent Script
 
-### Controllers
+Create:
 
-* Controllers Connected
-* Controller Battery
-* Controller Count
+```bash
+nano /userdata/system/homeassistant/ha_batocera_agent.sh
+```
 
-### System
+Copy and paste the contents of ```batocera_agent/ha_batocera_agent.sh``` from this repository.
 
-* CPU Temperature
-* CPU Usage
-* RAM Usage
-* IP Address
-* System Uptime
-* Storage Used
-* Storage Available
-* Storage Total
-* Storage Utilization
-* ROM Count
-* Software Version
-* Update Availability
+Save the file:
 
-## Home Assistant
+```text
+CTRL + X
+Y
+ENTER
+```
 
-The published MQTT data can be used to create:
 
-* Dashboard cards
-* Statistics
-* Automations
-* Notifications
-* Gaming activity tracking
-* Usage reports
+### 6. Make the Agent Executable
+
+```bash
+chmod +x /userdata/system/homeassistant/ha_batocera_agent.sh
+```
+
+
+### 7. Start the Agent
+
+```bash
+/userdata/system/homeassistant/ha_batocera_agent.sh start
+```
+
+After a few seconds, verify that Home Assistant is receiving MQTT data:
+
+1. Open **Home Assistant**
+2. Navigate to **Settings → Devices & Services**
+3. Select your **MQTT** integration
+4. Look for a device named **Batocera** (or whatever you configured as `DEVICE_NAME` in `secrets.conf`)
+5. Open the device to confirm that entities are showing up
+
+If the device or entities do not appear, check the MQTT broker logs and verify that your MQTT settings in `secrets.conf` are correct.
+
+
+### 8. Start Automatically After Reboot
+
+Edit:
+
+```bash
+nano /userdata/system/custom.sh
+```
+
+Add:
+
+```bash
+/userdata/system/homeassistant/ha_batocera_agent.sh start &
+```
+
+Save the file:
+
+```text
+CTRL + X
+Y
+ENTER
+```
+
+Make it executable:
+
+```bash
+chmod +x /userdata/system/custom.sh
+```
+
+
+### 9. Reboot Batocera
+
+```bash
+reboot
+```
+
+After rebooting, HA Batocera will start automatically.
+
+---
+
+## Updating
+
+When a new version is released, replace:
+
+```text
+ha_batocera_agent.sh
+```
+
+Your settings stored in ```secrets.conf``` will remain unchanged and do not need to be reconfigured or touched ever again.
+
+More documentation about this process will be provided soon.
 
 ## Screenshots
 
