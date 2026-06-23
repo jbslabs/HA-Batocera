@@ -10,8 +10,10 @@ HA Batocera is a lightweight Batocera agent that publishes gaming and system dat
 
 * Real-time MQTT integration
 * Current emulator tracking
-* Current and previous game tracking
-* Current and previous play session tracking
+* Current game tracking
+* Previous game tracking
+* Current play session tracking
+* Previous play session tracking
 * Total play time statistics
 * Controller connection monitoring
 * System uptime monitoring
@@ -99,6 +101,8 @@ The published MQTT data can be used to create:
   <img src="./screenshots/batocera01.png" width="220" />
 </p>
 
+Example Home Assistant dashboard showing HA Batocera sensors and gaming statistics.
+
 ---
 
 ## Roadmap
@@ -122,14 +126,23 @@ The published MQTT data can be used to create:
 * Multi-System Support
 
 ---
+
 ## Special Thanks
 
-Special thanks to StePhan McKillen (myle) and the Home Assistant community for helping inspire this project through the original Batocera MQTT discussion:
+Special thanks to StePhan McKillen (myle) and the Home Assistant community for helping inspire this project through an MQTT discussion post:
 
 https://community.home-assistant.io/t/batocera-to-home-assistant-via-mqtt/906675
 
-The community's experimentation with Batocera MQTT events helped demonstrate the possibilities of integrating retro gaming systems with Home Assistant and inspired the creation of HA Batocera.
+The original discussion demonstrated how MQTT could be used to bridge Batocera and Home Assistant and helped inspire the development of HA Batocera.
+
+
+## Acknowledgements
+
+- Batocera Linux Team
+- Home Assistant Community
+- MQTT Community
+- Everyone testing and providing feedback for HA Batocera
 
 ## License
 
-MIT License
+Released under the MIT License. See the LICENSE file for details.
