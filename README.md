@@ -97,11 +97,15 @@ The published MQTT data can be used to create:
 
 ## Screenshots
 
+Example Batocera device page in Home Assistant.
+
 <p align="center">
   <img src="./screenshots/hadevice.png" width="220" /> 
 </p>
 
 Example Home Assistant dashboard showing HA Batocera sensors and gaming statistics.
+
+Coming Soon
 
 ---
 
