@@ -4,9 +4,9 @@ Bring Batocera into Home Assistant with real-time MQTT sensors, game tracking, c
 
 HA Batocera is a lightweight Batocera agent that publishes gaming and system data to Home Assistant through MQTT, allowing you to build dashboards, automations, notifications, and statistics around your retro gaming setup.
 
-# ⚠️ This project is currently in active development. Features and installation methods may change before v1.0.0.
-
 ## Project Status
+
+### ⚠️ In active development. Features and installation methods may change before v1.0.0.
 
 Current Release: v0.9.0
 
