@@ -53,6 +53,10 @@ device_json() {
   echo "\"device\":{\"identifiers\":[\"$DEVICE_ID\"],\"name\":\"$DEVICE_NAME\",\"manufacturer\":\"Batocera\",\"model\":\"NucBox K6\",\"sw_version\":\"Batocera 43\"}"
 }
 
+availability_json() {
+  echo "\"availability_topic\":\"$BASE_TOPIC/status\",\"payload_available\":\"online\",\"payload_not_available\":\"offline\""
+}
+
 ###############################################################################
 # MQTT Discovery
 ###############################################################################
@@ -60,9 +64,10 @@ device_json() {
 publish_discovery() {
   local dev
   dev=$(device_json)
+  avail=$(availability_json)
 
   # Status
-  mqtt_pub "$DISCOVERY_PREFIX/binary_sensor/$DEVICE_ID/online/config" "{\"name\":\"Online\",\"unique_id\":\"${DEVICE_ID}_online\",\"state_topic\":\"$BASE_TOPIC/status\",\"payload_on\":\"online\",\"payload_off\":\"offline\",\"device_class\":\"connectivity\",$dev}"
+  mqtt_pub "$DISCOVERY_PREFIX/binary_sensor/$DEVICE_ID/online/config" "{\"name\":\"Online\",\"unique_id\":\"${DEVICE_ID}_online\",\"state_topic\":\"$BASE_TOPIC/status\",\"payload_on\":\"online\",\"payload_off\":\"offline\",\"device_class\":\"connectivity\",$dev,$avail}"
 
   # Controls
   mqtt_pub "$DISCOVERY_PREFIX/button/$DEVICE_ID/wake/config" "{\"name\":\"Wake\",\"unique_id\":\"${DEVICE_ID}_wake\",\"command_topic\":\"$BASE_TOPIC/command/wake\",\"icon\":\"mdi:power\",$dev}"
@@ -72,30 +77,32 @@ publish_discovery() {
   mqtt_pub "$DISCOVERY_PREFIX/button/$DEVICE_ID/shutdown/config" "{\"name\":\"Shutdown\",\"unique_id\":\"${DEVICE_ID}_shutdown\",\"command_topic\":\"$BASE_TOPIC/command/shutdown\",\"icon\":\"mdi:power-off\",$dev}"
 
   # Controller + gaming
-  mqtt_pub "$DISCOVERY_PREFIX/sensor/$DEVICE_ID/controller_connected/config" "{\"name\":\"Controller Connected\",\"unique_id\":\"${DEVICE_ID}_controller_connected\",\"state_topic\":\"$BASE_TOPIC/controller_connected\",\"icon\":\"mdi:controller-classic\",$dev}"
+  mqtt_pub "$DISCOVERY_PREFIX/sensor/$DEVICE_ID/controller_connected/config" "{\"name\":\"Controller Connected\",\"unique_id\":\"${DEVICE_ID}_controller_connected\",\"state_topic\":\"$BASE_TOPIC/controller_connected\",\"icon\":\"mdi:controller\",$dev,$avail}"
 
-  mqtt_pub "$DISCOVERY_PREFIX/sensor/$DEVICE_ID/controller_count/config" "{\"name\":\"Controller Count\",\"unique_id\":\"${DEVICE_ID}_controller_count\",\"state_topic\":\"$BASE_TOPIC/controller_count\",\"icon\":\"mdi:controller-classic\",\"state_class\":\"measurement\",$dev}"
+  mqtt_pub "$DISCOVERY_PREFIX/sensor/$DEVICE_ID/controller_battery/config" "{\"name\":\"Controller Battery\",\"unique_id\":\"${DEVICE_ID}_controller_battery\",\"state_topic\":\"$BASE_TOPIC/controller_battery\",\"icon\":\"mdi:microsoft-xbox-controller-battery-medium\",\"unit_of_measurement\":\"%\",\"device_class\":\"battery\",\"state_class\":\"measurement\",$dev,$avail}"
 
-  mqtt_pub "$DISCOVERY_PREFIX/sensor/$DEVICE_ID/emulator/config" "{\"name\":\"Emulator\",\"unique_id\":\"${DEVICE_ID}_emulator\",\"state_topic\":\"$BASE_TOPIC/emulator\",\"icon\":\"mdi:nintendo-game-boy\",$dev}"
+  mqtt_pub "$DISCOVERY_PREFIX/sensor/$DEVICE_ID/controller_count/config" "{\"name\":\"Controller Count\",\"unique_id\":\"${DEVICE_ID}_controller_count\",\"state_topic\":\"$BASE_TOPIC/controller_count\",\"icon\":\"mdi:controller-classic\",\"state_class\":\"measurement\",$dev,$avail}"
 
-  mqtt_pub "$DISCOVERY_PREFIX/sensor/$DEVICE_ID/current_game/config" "{\"name\":\"Current Game\",\"unique_id\":\"${DEVICE_ID}_current_game\",\"state_topic\":\"$BASE_TOPIC/current_game\",$dev}"
+  mqtt_pub "$DISCOVERY_PREFIX/sensor/$DEVICE_ID/emulator/config" "{\"name\":\"Emulator\",\"unique_id\":\"${DEVICE_ID}_emulator\",\"state_topic\":\"$BASE_TOPIC/emulator\",\"icon\":\"mdi:nintendo-game-boy\",$dev,$avail}"
+
+  mqtt_pub "$DISCOVERY_PREFIX/sensor/$DEVICE_ID/current_game/config" "{\"name\":\"Current Game\",\"unique_id\":\"${DEVICE_ID}_current_game\",\"state_topic\":\"$BASE_TOPIC/current_game\",$dev,$avail}"
 
   mqtt_pub "$DISCOVERY_PREFIX/sensor/$DEVICE_ID/last_played_game/config" "{\"name\":\"Last Played Game\",\"unique_id\":\"${DEVICE_ID}_last_played_game\",\"state_topic\":\"$BASE_TOPIC/last_played_game\",$dev}"
 
-  mqtt_pub "$DISCOVERY_PREFIX/sensor/$DEVICE_ID/current_session/config" "{\"name\":\"Current Session\",\"unique_id\":\"${DEVICE_ID}_current_session\",\"state_topic\":\"$BASE_TOPIC/current_session\",\"icon\":\"mdi:timer-sand\",$dev}"
+  mqtt_pub "$DISCOVERY_PREFIX/sensor/$DEVICE_ID/current_session/config" "{\"name\":\"Current Session\",\"unique_id\":\"${DEVICE_ID}_current_session\",\"state_topic\":\"$BASE_TOPIC/current_session\",\"icon\":\"mdi:timer-sand\",$dev,$avail}"
 
   mqtt_pub "$DISCOVERY_PREFIX/sensor/$DEVICE_ID/last_session/config" "{\"name\":\"Last Session\",\"unique_id\":\"${DEVICE_ID}_last_session\",\"state_topic\":\"$BASE_TOPIC/last_session\",\"icon\":\"mdi:timer-sand-complete\",$dev}"
 
   # System usage
-  mqtt_pub "$DISCOVERY_PREFIX/sensor/$DEVICE_ID/cpu_temperature/config" "{\"name\":\"CPU Temperature\",\"unique_id\":\"${DEVICE_ID}_cpu_temperature\",\"state_topic\":\"$BASE_TOPIC/cpu_temperature\",\"icon\":\"mdi:thermometer\",\"unit_of_measurement\":\"°C\",\"device_class\":\"temperature\",\"state_class\":\"measurement\",$dev}"
+  mqtt_pub "$DISCOVERY_PREFIX/sensor/$DEVICE_ID/cpu_temperature/config" "{\"name\":\"CPU Temperature\",\"unique_id\":\"${DEVICE_ID}_cpu_temperature\",\"state_topic\":\"$BASE_TOPIC/cpu_temperature\",\"icon\":\"mdi:thermometer\",\"unit_of_measurement\":\"°C\",\"device_class\":\"temperature\",\"state_class\":\"measurement\",$dev,$avail}"
 
-  mqtt_pub "$DISCOVERY_PREFIX/sensor/$DEVICE_ID/cpu_usage/config" "{\"name\":\"CPU Usage\",\"unique_id\":\"${DEVICE_ID}_cpu_usage\",\"state_topic\":\"$BASE_TOPIC/cpu_usage\",\"icon\":\"mdi:chip\",\"unit_of_measurement\":\"%\",\"state_class\":\"measurement\",$dev}"
+  mqtt_pub "$DISCOVERY_PREFIX/sensor/$DEVICE_ID/cpu_usage/config" "{\"name\":\"CPU Usage\",\"unique_id\":\"${DEVICE_ID}_cpu_usage\",\"state_topic\":\"$BASE_TOPIC/cpu_usage\",\"icon\":\"mdi:chip\",\"unit_of_measurement\":\"%\",\"state_class\":\"measurement\",$dev,$avail}"
 
-  mqtt_pub "$DISCOVERY_PREFIX/sensor/$DEVICE_ID/ram_usage/config" "{\"name\":\"RAM Usage\",\"unique_id\":\"${DEVICE_ID}_ram_usage\",\"state_topic\":\"$BASE_TOPIC/ram_usage\",\"icon\":\"mdi:memory\",\"unit_of_measurement\":\"%\",\"state_class\":\"measurement\",$dev}"
+  mqtt_pub "$DISCOVERY_PREFIX/sensor/$DEVICE_ID/ram_usage/config" "{\"name\":\"RAM Usage\",\"unique_id\":\"${DEVICE_ID}_ram_usage\",\"state_topic\":\"$BASE_TOPIC/ram_usage\",\"icon\":\"mdi:memory\",\"unit_of_measurement\":\"%\",\"state_class\":\"measurement\",$dev,$avail}"
 
   mqtt_pub "$DISCOVERY_PREFIX/sensor/$DEVICE_ID/ip_address/config" "{\"name\":\"IP Address\",\"unique_id\":\"${DEVICE_ID}_ip_address\",\"state_topic\":\"$BASE_TOPIC/ip_address\",\"icon\":\"mdi:ip\",$dev}"
 
-  mqtt_pub "$DISCOVERY_PREFIX/sensor/$DEVICE_ID/uptime/config" "{\"name\":\"Uptime\",\"unique_id\":\"${DEVICE_ID}_uptime\",\"state_topic\":\"$BASE_TOPIC/uptime\",\"icon\":\"mdi:chart-timeline-variant\",$dev}"
+  mqtt_pub "$DISCOVERY_PREFIX/sensor/$DEVICE_ID/uptime/config" "{\"name\":\"Uptime\",\"unique_id\":\"${DEVICE_ID}_uptime\",\"state_topic\":\"$BASE_TOPIC/uptime\",\"icon\":\"mdi:chart-timeline-variant\",$dev,$avail}"
 
   # Storage + ROMs
   mqtt_pub "$DISCOVERY_PREFIX/sensor/$DEVICE_ID/storage_used/config" "{\"name\":\"Storage Used\",\"unique_id\":\"${DEVICE_ID}_storage_used\",\"state_topic\":\"$BASE_TOPIC/storage/used\",\"icon\":\"mdi:harddisk\",\"unit_of_measurement\":\"GB\",\"device_class\":\"data_size\",\"state_class\":\"measurement\",$dev}"
@@ -155,6 +162,10 @@ get_controller_connected() {
   else
     echo "$names"
   fi
+}
+
+get_controller_battery() {
+  batocera-info 2>/dev/null | awk -F': ' '/Wireless Controller:/ {gsub("%","",$2); print $2; exit}'
 }
 
 get_current_game() {
@@ -284,7 +295,16 @@ get_storage_percent() {
 }
 
 get_rom_count() {
-  find /userdata/roms -type f 2>/dev/null | wc -l
+  find /userdata/roms -type f \( \
+    -iname "*.zip" -o \
+    -iname "*.3ds" -o \
+    -iname "*.iso" -o \
+    -iname "*.wua" -o \
+    -iname "*.pce" -o \
+    -iname "*.wad" -o \
+    -iname "*.rvz" -o \
+    -iname "*.d64" \
+  \) 2>/dev/null | wc -l
 }
 
 ###############################################################################
@@ -320,6 +340,11 @@ get_update() {
 ###############################################################################
 
 publish_sensors() {
+  publish_live_sensors
+  publish_slow_sensors
+}
+
+publish_live_sensors() {
   local controllers
   controllers=$(get_controller_count)
 
@@ -327,18 +352,25 @@ publish_sensors() {
   mqtt_pub "$BASE_TOPIC/status" "online"
 
   # Gaming
-  mqtt_pub "$BASE_TOPIC/controller_count" "$controllers"
   mqtt_pub "$BASE_TOPIC/controller_connected" "$(get_controller_connected)"
+  mqtt_pub "$BASE_TOPIC/controller_count" "$controllers"
   mqtt_pub "$BASE_TOPIC/emulator" "$(get_emulator)"
   mqtt_pub "$BASE_TOPIC/current_game" "$(get_current_game)"
-  mqtt_pub "$BASE_TOPIC/last_played_game" "$(get_last_played_game)"
   mqtt_pub "$BASE_TOPIC/current_session" "$(get_current_session)"
-  mqtt_pub "$BASE_TOPIC/last_session" "$(get_last_session)"
 
   # Hardware
   mqtt_pub "$BASE_TOPIC/cpu_temperature" "$(get_cpu_temp)"
   mqtt_pub "$BASE_TOPIC/cpu_usage" "$(get_cpu_usage)"
   mqtt_pub "$BASE_TOPIC/ram_usage" "$(get_ram_usage)"
+}
+
+publish_slow_sensors() {
+  # Gaming
+  mqtt_pub "$BASE_TOPIC/controller_battery" "$(get_controller_battery)"  
+  mqtt_pub "$BASE_TOPIC/last_played_game" "$(get_last_played_game)"
+  mqtt_pub "$BASE_TOPIC/last_session" "$(get_last_session)"
+
+  # Hardware
   mqtt_pub "$BASE_TOPIC/ip_address" "$(get_ip)"
   mqtt_pub "$BASE_TOPIC/uptime" "$(get_uptime)"
 
@@ -450,7 +482,16 @@ handle_event() {
 ###############################################################################
 
 listen_commands() {
-  mosquitto_sub -h "$MQTT_HOST" -p "$MQTT_PORT" -u "$MQTT_USER" -P "$MQTT_PASSWORD" -v -t "$BASE_TOPIC/command/#" | while read -r topic payload
+  mosquitto_sub \
+    -h "$MQTT_HOST" \
+    -p "$MQTT_PORT" \
+    -u "$MQTT_USER" \
+    -P "$MQTT_PASSWORD" \
+    -v \
+    -t "$BASE_TOPIC/command/#" \
+    --will-topic "$BASE_TOPIC/status" \
+    --will-payload "offline" \
+    --will-retain | while read -r topic payload
   do
     log "Command received: $topic $payload"
 
@@ -482,13 +523,15 @@ start_service() {
   log "Batocera Home Assistant service started"
   listen_commands &
   COMMAND_PID=$!
+  slow_counter=0
   while [ -f "$SERVICE_FLAG" ]; do
-    publish_sensors
-    if [ -f "$CURRENT_SESSION_START_FILE" ]; then
-      sleep 10
-    else
-      sleep 30
+    publish_live_sensors
+    if [ "$slow_counter" -ge 12 ]; then
+      publish_slow_sensors
+      slow_counter=0
     fi
+    slow_counter=$((slow_counter + 1))
+    sleep 5
   done
   kill "$COMMAND_PID" 2>/dev/null
 }
@@ -529,4 +572,3 @@ case "$1" in
     echo "Usage: $0 start|stop|restart|install|event"
     ;;
 esac
-
