@@ -13,7 +13,7 @@
 ###############################################################################
 
 BASE_DIR="/userdata/system/homeassistant"
-CONFIG_FILE="$BASE_DIR/config.conf"
+CONFIG_FILE="$BASE_DIR/secrets.conf"
 LOG_FILE="$BASE_DIR/logs/homeassistant.log"
 
 STATE_DIR="/tmp/playsession"
@@ -392,13 +392,15 @@ publish_slow_sensors() {
 
 install_event_scripts() {
   local event
+  local agent
+  agent=$(readlink -f "$0")
 
   for event in game-start game-end system-selected controls-changed; do
     mkdir -p "/userdata/system/configs/emulationstation/scripts/$event"
 
     cat > "/userdata/system/configs/emulationstation/scripts/$event/homeassistant.sh" <<EOF
 #!/bin/bash
-/userdata/system/homeassistant/homeassistant.sh event "$event" "\$@"
+"$agent" event "$event" "\$@"
 EOF
 
     chmod +x "/userdata/system/configs/emulationstation/scripts/$event/homeassistant.sh"
