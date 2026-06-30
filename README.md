@@ -207,7 +207,21 @@ If the device or entities do not appear, check the MQTT broker logs and verify t
 
 ### 8. Start Automatically After Reboot
 
-Edit:
+**Batocera v43 and newer** (recommended): install the bundled service wrapper.
+`custom.sh` autostart was removed in v43 in favor of `system.services`.
+
+```bash
+cp /userdata/system/homeassistant/homeassistant.service /userdata/system/services/homeassistant
+chmod 700 /userdata/system/services/homeassistant
+batocera-services enable homeassistant   # persists across reboots
+batocera-services start homeassistant     # start now, no reboot required
+```
+
+(Copy `batocera_agent/homeassistant.service` from this repo to
+`/userdata/system/homeassistant/` first, or paste it directly to the services
+path above.)
+
+**Older Batocera (pre-v43)**: add the agent to `custom.sh` instead.
 
 ```bash
 nano /userdata/system/custom.sh
@@ -219,15 +233,7 @@ Add:
 /userdata/system/homeassistant/ha_batocera_agent.sh start &
 ```
 
-Save the file:
-
-```text
-CTRL + X
-Y
-ENTER
-```
-
-Make it executable:
+Save (`CTRL + X`, `Y`, `ENTER`), then:
 
 ```bash
 chmod +x /userdata/system/custom.sh

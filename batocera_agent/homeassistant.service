@@ -1,0 +1,33 @@
+#!/bin/bash
+###############################################################################
+# HA-Batocera service wrapper for Batocera v43+
+#
+# On Batocera v43 the old custom.sh autostart is gone. Install this as a
+# Batocera service so the agent starts on boot and stops cleanly on shutdown:
+#
+#   cp homeassistant.service /userdata/system/services/homeassistant
+#   chmod 700 /userdata/system/services/homeassistant
+#   batocera-services enable homeassistant   # persists via system.services key
+#   batocera-services start homeassistant    # start now, no reboot needed
+#
+# Boot runs this with "start"; shutdown runs it with "stop".
+###############################################################################
+
+AGENT="/userdata/system/homeassistant/ha_batocera_agent.sh"
+
+case "$1" in
+  start)
+    trap '"$AGENT" stop; exit 0' SIGINT SIGTERM
+    "$AGENT" start
+    ;;
+  stop)
+    "$AGENT" stop
+    ;;
+  status)
+    "$AGENT" status
+    ;;
+  *)
+    echo "Usage: $0 {start|stop|status}"
+    exit 1
+    ;;
+esac

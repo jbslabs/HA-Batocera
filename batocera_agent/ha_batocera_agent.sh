@@ -3,8 +3,8 @@
 ###############################################################################
 
 # HA-Batocera Agent
-# Version: 1.0.0
-# JBSLabs
+# Version: 0.9.1
+# JBSLabs (community fixes)
 
 ###############################################################################
 
@@ -13,7 +13,7 @@
 ###############################################################################
 
 BASE_DIR="/userdata/system/homeassistant"
-CONFIG_FILE="$BASE_DIR/config.conf"
+CONFIG_FILE="$BASE_DIR/secrets.conf"
 LOG_FILE="$BASE_DIR/logs/homeassistant.log"
 
 STATE_DIR="/tmp/playsession"
@@ -24,9 +24,22 @@ LAST_GAME_FILE="$STATE_DIR/last_played_game"
 EMULATOR_FILE="$STATE_DIR/emulator"
 CURRENT_SESSION_START_FILE="$STATE_DIR/current_session_start"
 LAST_SESSION_DURATION_FILE="$STATE_DIR/last_session_duration"
+ROM_COUNT_CACHE="$STATE_DIR/rom_count"
+UPDATE_CACHE="$STATE_DIR/update"
 
 mkdir -p "$BASE_DIR/logs" "$STATE_DIR"
 
+# status only inspects the local flag file and must work even without config
+# (e.g. a watchdog probing before secrets.conf exists).
+if [ "$1" = "status" ]; then
+  [ -f "$SERVICE_FLAG" ] && echo "running" || echo "stopped"
+  exit 0
+fi
+
+if [ ! -f "$CONFIG_FILE" ]; then
+  echo "FATAL: config not found at $CONFIG_FILE (copy secrets.conf.example and edit it)" >&2
+  exit 1
+fi
 source "$CONFIG_FILE"
 
 ###############################################################################
@@ -38,6 +51,9 @@ log() {
 }
 
 mqtt_pub() {
+  # Note: the MQTT password is passed via -P, so it is briefly visible in the
+  # process list. Acceptable on a trusted LAN; harden with a broker ACL or a
+  # mosquitto config file if that is a concern.
   local topic="$1"
   local message="$2"
   local retain="${3:-true}"
@@ -50,7 +66,9 @@ mqtt_pub() {
 }
 
 device_json() {
-  echo "\"device\":{\"identifiers\":[\"$DEVICE_ID\"],\"name\":\"$DEVICE_NAME\",\"manufacturer\":\"Batocera\",\"model\":\"NucBox K6\",\"sw_version\":\"Batocera 43\"}"
+  local model_field=""
+  [ -n "$MODEL" ] && model_field="\"model\":\"$MODEL\","
+  echo "\"device\":{\"identifiers\":[\"$DEVICE_ID\"],\"name\":\"$DEVICE_NAME\",\"manufacturer\":\"Batocera\",${model_field}\"sw_version\":\"$(get_software_version)\"}"
 }
 
 availability_json() {
@@ -216,8 +234,26 @@ get_last_session() {
 ###############################################################################
 
 get_cpu_temp() {
-  if [ -f /sys/class/thermal/thermal_zone0/temp ]; then
-    awk '{printf "%.1f", (($1/1000) * 9/5) + 32}' /sys/class/thermal/thermal_zone0/temp
+  # Report CPU temperature in Celsius (matches the discovery unit/device_class).
+  # Prefer a CPU-package zone; never assume thermal_zone0 (acpitz can report a
+  # bogus value such as -263 C). Fall back to the first zone in a plausible
+  # range (0-150 C).
+  local zone milli pref="" fallback=""
+  for zone in /sys/class/thermal/thermal_zone*; do
+    [ -r "$zone/temp" ] || continue
+    milli=$(cat "$zone/temp" 2>/dev/null)
+    [ "$milli" -gt 0 ] 2>/dev/null && [ "$milli" -lt 150000 ] 2>/dev/null || continue
+    [ -z "$fallback" ] && fallback="$milli"
+    case "$(cat "$zone/type" 2>/dev/null)" in
+      x86_pkg_temp|coretemp|cpu-thermal|*cpu_thermal*)
+        pref="$milli"
+        break
+        ;;
+    esac
+  done
+  milli="${pref:-$fallback}"
+  if [ -n "$milli" ]; then
+    awk -v m="$milli" 'BEGIN { printf "%.1f", m/1000 }'
   else
     echo "unknown"
   fi
@@ -267,7 +303,16 @@ get_ram_usage() {
 }
 
 get_ip() {
-  ip -4 addr show eth1 | awk '/inet / {print $2}' | cut -d/ -f1
+  # Use the interface that carries the default route rather than a hardcoded
+  # name (this box is eth0; others may be eth1/wlan0/enp*).
+  local iface ip_addr
+  ip_addr=$(ip route get 1.1.1.1 2>/dev/null | awk '{for(i=1;i<=NF;i++) if($i=="src"){print $(i+1); exit}}')
+  if [ -n "$ip_addr" ]; then
+    echo "$ip_addr"
+    return
+  fi
+  iface=$(ip route get 1.1.1.1 2>/dev/null | awk '{for(i=1;i<=NF;i++) if($i=="dev"){print $(i+1); exit}}')
+  [ -n "$iface" ] && ip -4 addr show "$iface" 2>/dev/null | awk '/inet / {print $2}' | cut -d/ -f1
 }
 
 get_uptime() {
@@ -294,17 +339,44 @@ get_storage_percent() {
   df /userdata | awk 'NR==2 {gsub("%","",$5); print $5}'
 }
 
+# Cache helper: $1 cache file, $2 ttl seconds. Cache format is two lines:
+# epoch timestamp, then the value. Returns 0 (fresh) / 1 (stale or missing).
+_cache_fresh() {
+  local f="$1" ttl="$2" ts now
+  [ -f "$f" ] || return 1
+  ts=$(head -1 "$f" 2>/dev/null)
+  echo "$ts" | grep -Eq '^[0-9]+$' || return 1
+  now=$(date +%s)
+  [ $((now - ts)) -lt "$ttl" ]
+}
+
 get_rom_count() {
-  find /userdata/roms -type f \( \
-    -iname "*.zip" -o \
-    -iname "*.3ds" -o \
-    -iname "*.iso" -o \
-    -iname "*.wua" -o \
-    -iname "*.pce" -o \
-    -iname "*.wad" -o \
-    -iname "*.rvz" -o \
-    -iname "*.d64" \
-  \) 2>/dev/null | wc -l
+  # Counting a multi-hundred-GB ROM tree is expensive, and the total barely
+  # changes, so cache it for an hour instead of running find every cycle.
+  if _cache_fresh "$ROM_COUNT_CACHE" 3600; then
+    sed -n '2p' "$ROM_COUNT_CACHE"
+    return
+  fi
+  local count
+  count=$(find /userdata/roms -type f \( \
+    -iname "*.zip"  -o -iname "*.7z"   -o -iname "*.chd"  -o -iname "*.cue"  -o \
+    -iname "*.iso"  -o -iname "*.bin"  -o -iname "*.img"  -o -iname "*.rvz"  -o \
+    -iname "*.wbfs" -o -iname "*.wua"  -o -iname "*.wad"  -o -iname "*.nsp"  -o \
+    -iname "*.xci"  -o -iname "*.3ds"  -o -iname "*.cia"  -o -iname "*.nds"  -o \
+    -iname "*.gba"  -o -iname "*.gb"   -o -iname "*.gbc"  -o -iname "*.nes"  -o \
+    -iname "*.sfc"  -o -iname "*.smc"  -o -iname "*.fig"  -o -iname "*.n64"  -o \
+    -iname "*.z64"  -o -iname "*.v64"  -o -iname "*.md"   -o -iname "*.smd"  -o \
+    -iname "*.gen"  -o -iname "*.gg"   -o -iname "*.sms"  -o -iname "*.pce"  -o \
+    -iname "*.sgx"  -o -iname "*.d64"  -o -iname "*.t64"  -o -iname "*.prg"  -o \
+    -iname "*.crt"  -o -iname "*.a26"  -o -iname "*.a52"  -o -iname "*.a78"  -o \
+    -iname "*.lnx"  -o -iname "*.ngp"  -o -iname "*.ngc"  -o -iname "*.ws"   -o \
+    -iname "*.wsc"  -o -iname "*.vb"   -o -iname "*.col"  -o -iname "*.int"  -o \
+    -iname "*.sg"   -o -iname "*.fds"  -o -iname "*.vec"  -o -iname "*.st"   -o \
+    -iname "*.dsk"  -o -iname "*.adf"  -o -iname "*.cso"  -o -iname "*.pbp"  -o \
+    -iname "*.nro"  -o -iname "*.p8"   -o -iname "*.m3u" \
+  \) 2>/dev/null | wc -l)
+  printf '%s\n%s\n' "$(date +%s)" "$count" > "$ROM_COUNT_CACHE"
+  echo "$count"
 }
 
 ###############################################################################
@@ -323,16 +395,21 @@ get_software_version() {
 }
 
 get_update() {
-  local output
-  output=$(batocera-check-updates 2>/dev/null)
-
-  echo "$output" | grep -qi "update available\|update found\|new version"
-
-  if [ "$?" -eq 0 ]; then
-    echo "ON"
-  else
-    echo "OFF"
+  # batocera-check-updates hits the network; cache the result for an hour
+  # rather than querying every cycle.
+  if _cache_fresh "$UPDATE_CACHE" 3600; then
+    sed -n '2p' "$UPDATE_CACHE"
+    return
   fi
+  local output state
+  output=$(batocera-check-updates 2>/dev/null)
+  if echo "$output" | grep -qi "update available\|update found\|new version"; then
+    state="ON"
+  else
+    state="OFF"
+  fi
+  printf '%s\n%s\n' "$(date +%s)" "$state" > "$UPDATE_CACHE"
+  echo "$state"
 }
 
 ###############################################################################
@@ -392,13 +469,15 @@ publish_slow_sensors() {
 
 install_event_scripts() {
   local event
+  local agent
+  agent=$(readlink -f "$0")
 
   for event in game-start game-end system-selected controls-changed; do
     mkdir -p "/userdata/system/configs/emulationstation/scripts/$event"
 
     cat > "/userdata/system/configs/emulationstation/scripts/$event/homeassistant.sh" <<EOF
 #!/bin/bash
-/userdata/system/homeassistant/homeassistant.sh event "$event" "\$@"
+"$agent" event "$event" "\$@"
 EOF
 
     chmod +x "/userdata/system/configs/emulationstation/scripts/$event/homeassistant.sh"
@@ -534,11 +613,15 @@ start_service() {
     sleep 5
   done
   kill "$COMMAND_PID" 2>/dev/null
+  # The backgrounded subshell may leave the mosquitto_sub child running; reap it.
+  pkill -f "mosquitto_sub.*${BASE_TOPIC}/command/#" 2>/dev/null
 }
 
 stop_service() {
   rm -f "$SERVICE_FLAG"
   mqtt_pub "$BASE_TOPIC/status" "offline"
+  # Stop the command listener started by another (start) process.
+  pkill -f "mosquitto_sub.*${BASE_TOPIC}/command/#" 2>/dev/null
   log "Batocera Home Assistant service stopped"
 }
 
@@ -568,7 +651,15 @@ case "$1" in
     handle_event "$@"
     ;;
 
+  status)
+    if [ -f "$SERVICE_FLAG" ]; then
+      echo "running"
+    else
+      echo "stopped"
+    fi
+    ;;
+
   *)
-    echo "Usage: $0 start|stop|restart|install|event"
+    echo "Usage: $0 start|stop|restart|install|event|status"
     ;;
 esac
